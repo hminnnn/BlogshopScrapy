@@ -1,0 +1,2 @@
+# blogshopscrapy
+trying out  scrapy 
