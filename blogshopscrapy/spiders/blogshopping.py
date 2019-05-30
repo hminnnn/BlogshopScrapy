@@ -26,7 +26,7 @@ blogshop_names_dict = {'thetinselrack': 'TTR',
                        'shopsassydream': 'SSD'}
 
 
-def writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_price, item_type, item_url, ):
+def writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_price, item_type, item_url, item_imageUrl):
     # print("writing")
     blogshopitem['baseUrl'] = config[blogshopname]['START_URL']
     blogshopitem['shopNameValue'] = blogshopname
@@ -35,17 +35,16 @@ def writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_pr
     blogshopitem['itemPrice'] = item_price
     blogshopitem['itemType'] = item_type
     blogshopitem['itemUrl'] = item_url
+    blogshopitem['itemImageUrl'] = item_imageUrl
     return blogshopitem
 
 
 class BlogshoppingSpider(scrapy.Spider):
     name = 'blogshopping'
     allowed_domains = ['thetinselrack.com', 'shopsassydream.com']
-    start_urls = ['https://www.thetinselrack.com', 'https://www.shopsassydream.com']
-    # start_urls = ['https://www.shopsassydream.com']
+    # start_urls = ['https://www.thetinselrack.com', 'https://www.shopsassydream.com']
+    start_urls = ['https://www.shopsassydream.com']
     # start_urls = ['https://www.thetinselrack.com/category/apparel']
-
-
 
     def parse(self, response):
         # pass
@@ -132,20 +131,28 @@ class BlogshoppingSpider(scrapy.Spider):
             if item_type == "":
                 item_type = ['others']
 
+            # --- PRODUCT IMAGE ---
+            item_imageUrl = item.css(config[blogshopname]['ITEM_IMAGEURL']).extract_first()
+            if item_imageUrl is None:
+                item_url = ""
+
+
             # print("item_name:", item_name)
             # print("item_price:", item_price)
             # print("item_url:", item_url)
             # print("item_type:", item_type)
+            print("item_imageUrl:", item_imageUrl)
 
-
-            if item_url[:1] != '/':  # TTR has the same urls without / infront under the /product page
+            # --- REMOVE DUPLICATES ITEM_URLS --- TTR has the same urls with and without / under the /product page
+            if item_url[:1] != '/':
                 item_url = "/" + item_url
 
+            # --- CHECK FOR DUPES IN ALREADY PARSED URLS ---  will have dupes as all appear again at main apparels page
             if item_url not in parsedUrls:
                 parsedUrls[item_url] = 1
-                blogshopitem = writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_price, item_type, item_url, )
+                blogshopitem = writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_price, item_type, item_url, item_imageUrl)
                 yield blogshopitem
-            else:  # there will be dupes for all that appear under the main apparels page
+            else:
                 parsedUrls[item_url] += 1
                 # print("dupe found!!!!!" + item_url)
 

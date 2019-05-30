@@ -46,6 +46,7 @@ class BlogshopscrapyPipeline(object):
                 valid = False
                 # raise DropItem("Missing {0}!".format(data))
         if valid:
-            self.db[self.mongodb_collection].insert(dict(item))
+            self.db[self.mongodb_collection].update({'_id': item['itemUrl']}, dict(item), upsert=True)  #set itemUrl as primary key.
+            # self.db[self.mongodb_collection].insert(dict(item))
             logging.info("Added into MongoDB!")
         return item

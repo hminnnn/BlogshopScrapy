@@ -18,4 +18,5 @@ class BlogshopscrapyItem(scrapy.Item):
     itemPrice = scrapy.Field()
     itemType = scrapy.Field()
     itemUrl = scrapy.Field()
+    itemImageUrl = scrapy.Field()
     # pass
