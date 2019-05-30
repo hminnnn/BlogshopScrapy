@@ -12,6 +12,7 @@ class BlogshopscrapyItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
     baseUrl = scrapy.Field()
+    shopNameValue = scrapy.Field()
     pageName = scrapy.Field()
     itemName = scrapy.Field()
     itemPrice = scrapy.Field()

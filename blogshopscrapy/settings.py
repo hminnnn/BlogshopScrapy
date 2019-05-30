@@ -104,4 +104,4 @@ MONGODB_COLLECTION = "blogshopdata"
 # FEED_URI = 'data/%(name)s/%(time)s.json'
 # FEED_FORMAT = 'json'
 
-DOWNLOAD_DELAY = 5
+DOWNLOAD_DELAY = 2

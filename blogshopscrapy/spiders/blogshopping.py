@@ -8,11 +8,11 @@ from blogshopscrapy.items import BlogshopscrapyItem
 # load config
 config = configparser.ConfigParser()
 config.read('...\\.\\..\\resources\\blogshop-properties.ini')
-runOnePage = True
+runOnePage = False
 
 item_type_tags = {'dress': ['dress', 'one-piece'],
                   'skirts': ['skirt', 'bottoms'],
-                  'shorts': ['short', 'bottoms'],
+                  'shorts': ['shorts', 'bottoms'],
                   'tops': ['top'],
                   'pants': ['pants', 'bottoms'],
                   'romper': ['romper', 'one-piece'],
@@ -29,6 +29,7 @@ blogshop_names_dict = {'thetinselrack': 'TTR',
 def writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_price, item_type, item_url, ):
     # print("writing")
     blogshopitem['baseUrl'] = config[blogshopname]['START_URL']
+    blogshopitem['shopNameValue'] = blogshopname
     blogshopitem['pageName'] = current_page_url
     blogshopitem['itemName'] = item_name
     blogshopitem['itemPrice'] = item_price
@@ -40,14 +41,19 @@ def writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_pr
 class BlogshoppingSpider(scrapy.Spider):
     name = 'blogshopping'
     allowed_domains = ['thetinselrack.com', 'shopsassydream.com']
-    # start_urls = ['https://www.thetinselrack.com', 'https://www.shopsassydream.com/']
+    start_urls = ['https://www.thetinselrack.com', 'https://www.shopsassydream.com']
+    # start_urls = ['https://www.shopsassydream.com']
+    # start_urls = ['https://www.thetinselrack.com/category/apparel']
 
-    start_urls = ['https://www.thetinselrack.com/category/apparel']
+
 
     def parse(self, response):
         # pass
         print("processing:" + response.url)
+
+        global parsedUrls
         global runOnePage
+        parsedUrls = {}
         if response.status == 200:
 
             # print out config file
@@ -85,6 +91,7 @@ class BlogshoppingSpider(scrapy.Spider):
 
         current_page_url = response.url
         blogshopname = response.meta.get('blogshopname')
+
         # print("blogshopname:", blogshopname)
         # print("page url:", response.url)
 
@@ -131,8 +138,16 @@ class BlogshoppingSpider(scrapy.Spider):
             # print("item_type:", item_type)
 
 
-            blogshopitem = writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_price, item_type, item_url, )
-            yield blogshopitem
+            if item_url[:1] != '/':  # TTR has the same urls without / infront under the /product page
+                item_url = "/" + item_url
+
+            if item_url not in parsedUrls:
+                parsedUrls[item_url] = 1
+                blogshopitem = writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_price, item_type, item_url, )
+                yield blogshopitem
+            else:  # there will be dupes for all that appear under the main apparels page
+                parsedUrls[item_url] += 1
+                # print("dupe found!!!!!" + item_url)
 
         if not runOnePage:
             # Next page
