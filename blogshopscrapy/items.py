@@ -19,4 +19,5 @@ class BlogshopscrapyItem(scrapy.Item):
     itemType = scrapy.Field()
     itemUrl = scrapy.Field()
     itemImageUrl = scrapy.Field()
+    crawlCount = scrapy.Field()
     # pass

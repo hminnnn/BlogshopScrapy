@@ -10,21 +10,8 @@ config = configparser.ConfigParser()
 config.read('...\\.\\..\\resources\\blogshop-properties.ini')
 runOnePage = False
 
-item_type_tags = {'dress': ['dress', 'one-piece'],
-                  'skirts': ['skirt', 'bottoms'],
-                  'shorts': ['shorts', 'bottoms'],
-                  'tops': ['top'],
-                  'pants': ['pants', 'bottoms'],
-                  'romper': ['romper', 'one-piece'],
-                  'one-piece': ['one-piece'],
-                  'onepiece': ['one-piece'],
-                  'blouse': ['top'],
-                  'culottes': ['pants', 'bottoms'],
-                  }
-
 blogshop_names_dict = {'thetinselrack': 'TTR',
                        'shopsassydream': 'SSD'}
-
 
 def writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_price, item_type, item_url, item_imageUrl):
     # print("writing")
@@ -42,17 +29,16 @@ def writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_pr
 class BlogshoppingSpider(scrapy.Spider):
     name = 'blogshopping'
     allowed_domains = ['thetinselrack.com', 'shopsassydream.com']
-    # start_urls = ['https://www.thetinselrack.com', 'https://www.shopsassydream.com']
-    start_urls = ['https://www.shopsassydream.com']
-    # start_urls = ['https://www.thetinselrack.com/category/apparel']
+    start_urls = ['https://www.thetinselrack.com', 'https://www.shopsassydream.com']
+    # start_urls = ['https://www.thetinselrack.com']
+    if runOnePage:
+        start_urls = ['https://www.thetinselrack.com/category/apparel']
 
     def parse(self, response):
         # pass
-        print("processing:" + response.url)
+        # print("processing:" + response.url)
 
-        global parsedUrls
         global runOnePage
-        parsedUrls = {}
         if response.status == 200:
 
             # print out config file
@@ -92,69 +78,34 @@ class BlogshoppingSpider(scrapy.Spider):
         blogshopname = response.meta.get('blogshopname')
 
         # print("blogshopname:", blogshopname)
-        # print("page url:", response.url)
 
         blogshopitem = BlogshopscrapyItem()
 
         product_rows = response.xpath(config[blogshopname]['PRODUCT_ROW'])
 
         for item in product_rows:
-            print("item:", item)
+
             # --- PRODUCT NAME ---
             item_name = item.xpath(config[blogshopname]['ITEM_NAME']).extract_first()
-            tree = lxml.html.fromstring(
-                item_name)  # removes html tags from product name. Some names have <br>, making it unable to use .text()
-            item_name = tree.text_content().strip()
 
             # --- PRODUCT PRICE ---
             item_price = item.xpath(config[blogshopname]['ITEM_PRICE']).extract_first()
             if item_price is None:  # Catch the promo price. Diff selector from normal price
-                print("noneeeeeeeeee")
+                print("no normal price, taking promo price")
                 item_price = item.xpath(config[blogshopname]['ITEM_PRICE_2']).extract_first()
-            if item_price is None:
-                item_price = "SGD0"
 
             # --- PRODUCT URL ---
             item_url = item.css(config[blogshopname]['ITEM_URL']).extract_first()
-            if item_url is None:
-                item_url = ""
 
             # --- PRODUCT TYPE ---
             item_type = ""
-            for cat_name in item_type_tags:
-                if cat_name in item_url:
-                    item_type = item_type_tags[cat_name]
-                    break
-                if cat_name in current_page_url:
-                    item_type = item_type_tags[cat_name]
-                    break
-            if item_type == "":
-                item_type = ['others']
 
             # --- PRODUCT IMAGE ---
             item_imageUrl = item.css(config[blogshopname]['ITEM_IMAGEURL']).extract_first()
-            if item_imageUrl is None:
-                item_url = ""
 
-
-            # print("item_name:", item_name)
-            # print("item_price:", item_price)
-            # print("item_url:", item_url)
-            # print("item_type:", item_type)
-            print("item_imageUrl:", item_imageUrl)
-
-            # --- REMOVE DUPLICATES ITEM_URLS --- TTR has the same urls with and without / under the /product page
-            if item_url[:1] != '/':
-                item_url = "/" + item_url
-
-            # --- CHECK FOR DUPES IN ALREADY PARSED URLS ---  will have dupes as all appear again at main apparels page
-            if item_url not in parsedUrls:
-                parsedUrls[item_url] = 1
-                blogshopitem = writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_price, item_type, item_url, item_imageUrl)
-                yield blogshopitem
-            else:
-                parsedUrls[item_url] += 1
-                # print("dupe found!!!!!" + item_url)
+            # Process at pipelines
+            blogshopitem = writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_price, item_type, item_url, item_imageUrl)
+            yield blogshopitem
 
         if not runOnePage:
             # Next page

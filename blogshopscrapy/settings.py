@@ -8,6 +8,7 @@
 #     https://doc.scrapy.org/en/latest/topics/settings.html
 #     https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://doc.scrapy.org/en/latest/topics/spider-middleware.html
+from datetime import date
 
 BOT_NAME = 'blogshopscrapy'
 
@@ -71,7 +72,8 @@ ITEM_PIPELINES = {
 MONGODB_SERVER = 'localhost'
 MONGODB_PORT = 27017
 MONGODB_DB = "blogshopscrapy"
-MONGODB_COLLECTION = "blogshopdata"
+MONGODB_COLLECTION = "data_2019-08-18"
+# MONGODB_COLLECTION = "data_test_" + str(date.today())
 # ITEM_PIPELINES = ['stack.pipelines.MongoDBPipeline', ]
 
 
