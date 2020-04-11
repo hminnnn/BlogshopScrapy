@@ -10,14 +10,14 @@ from blogshopscrapy.items import BlogshopscrapyItem
 config = configparser.ConfigParser()
 config.read('...\\.\\..\\resources\\blogshop-properties.ini')
 runOnePage = False
-maxPagesPerSection = 5
+maxPagesPerSection = 50
 
 blogshop_names_dict = {'thetinselrack': 'TTR',
                        'shopsassydream': 'SSD'}
 
 
 def writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_price, item_type, item_url,
-                item_imageUrl):
+                item_imageUrl, item_page_no):
     print("writing")
     blogshopitem['baseUrl'] = config[blogshopname]['START_URL']
     blogshopitem['shopNameValue'] = blogshopname
@@ -28,6 +28,7 @@ def writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_pr
     blogshopitem['itemUrl'] = item_url
     blogshopitem['itemImageUrl'] = item_imageUrl
     blogshopitem['dateCrawled'] = ""
+    blogshopitem['crawlCount']= item_page_no
     return blogshopitem
 
 
@@ -89,6 +90,8 @@ class BlogshoppingSpider(scrapy.Spider):
         product_rows = response.xpath(config[blogshopname]['PRODUCT_ROW'])
 
         for item in product_rows:
+            # --- PAGE NUMBER FOR RANKING ---
+            item_page_no = response.meta.get('count')
 
             # --- PRODUCT NAME ---
             item_name = item.xpath(config[blogshopname]['ITEM_NAME']).extract_first()
@@ -110,7 +113,7 @@ class BlogshoppingSpider(scrapy.Spider):
 
             # Process at pipelines
             blogshopitem = writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_price, item_type,
-                                       item_url, item_imageUrl)
+                                       item_url, item_imageUrl, item_page_no)
             yield blogshopitem
 
         if not runOnePage:
