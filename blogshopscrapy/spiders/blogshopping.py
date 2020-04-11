@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import scrapy
 import configparser
-import lxml.html
+from scrapy.crawler import CrawlerProcess
+
 
 from blogshopscrapy.items import BlogshopscrapyItem
 
@@ -9,12 +10,15 @@ from blogshopscrapy.items import BlogshopscrapyItem
 config = configparser.ConfigParser()
 config.read('...\\.\\..\\resources\\blogshop-properties.ini')
 runOnePage = False
+maxPagesPerSection = 5
 
 blogshop_names_dict = {'thetinselrack': 'TTR',
                        'shopsassydream': 'SSD'}
 
-def writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_price, item_type, item_url, item_imageUrl):
-    # print("writing")
+
+def writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_price, item_type, item_url,
+                item_imageUrl):
+    print("writing")
     blogshopitem['baseUrl'] = config[blogshopname]['START_URL']
     blogshopitem['shopNameValue'] = blogshopname
     blogshopitem['pageName'] = current_page_url
@@ -23,6 +27,7 @@ def writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_pr
     blogshopitem['itemType'] = item_type
     blogshopitem['itemUrl'] = item_url
     blogshopitem['itemImageUrl'] = item_imageUrl
+    blogshopitem['dateCrawled'] = ""
     return blogshopitem
 
 
@@ -35,8 +40,6 @@ class BlogshoppingSpider(scrapy.Spider):
         start_urls = ['https://www.thetinselrack.com/category/apparel']
 
     def parse(self, response):
-        # pass
-        # print("processing:" + response.url)
 
         global runOnePage
         if response.status == 200:
@@ -46,11 +49,10 @@ class BlogshoppingSpider(scrapy.Spider):
             # contents = f.read()
             # print(contents)
 
-            # parse which blogshop
+            # identify which blogshop is the current response from
             for name in blogshop_names_dict:
                 if name in response.url:
                     blogshopname = blogshop_names_dict[name]
-                    # print("currently running:", blogshopname)
                     break
 
             # get available categories to be parsed
@@ -60,24 +62,27 @@ class BlogshoppingSpider(scrapy.Spider):
             if runOnePage:  # only one page for testing
                 yield scrapy.Request(
                     response.urljoin(response.url),
-                    callback=self.parseCategory, meta={'blogshopname': blogshopname})
+                    callback=self.parseCategory, meta={'blogshopname': blogshopname, 'count': 0})
             else:
                 categories = list(set(categories))  # store in map to remove duplicates
-                # print(categories)
-                for a in categories:
+                print(categories)
+                for a in categories:  # loop through all pages in
                     if a:
                         next_page = response.urljoin(a)
-                        # print("heading to:", next_page)
                         yield scrapy.Request(response.urljoin(next_page), callback=self.parseCategory,
-                                             meta={'blogshopname': blogshopname})
+                                             meta={'blogshopname': blogshopname, 'count': 0})
 
-    # Parse details on each page for each category
+    # ------- Parse details on each page for each category -------
     def parseCategory(self, response):
+        global maxPagesPerSection
+        if response.meta.get('count') > maxPagesPerSection:
+            print("ok no. of pages is now: ", response.meta.get('count'))
+            return None
+
+        print("current page: ", response.meta.get('count'))
 
         current_page_url = response.url
         blogshopname = response.meta.get('blogshopname')
-
-        # print("blogshopname:", blogshopname)
 
         blogshopitem = BlogshopscrapyItem()
 
@@ -104,14 +109,20 @@ class BlogshoppingSpider(scrapy.Spider):
             item_imageUrl = item.css(config[blogshopname]['ITEM_IMAGEURL']).extract_first()
 
             # Process at pipelines
-            blogshopitem = writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_price, item_type, item_url, item_imageUrl)
+            blogshopitem = writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_price, item_type,
+                                       item_url, item_imageUrl)
             yield blogshopitem
 
         if not runOnePage:
             # Next page
             next_page = response.css(config[blogshopname]['NEXT_PAGE_SELECTOR']).extract_first()
-            # print(next_page)
             if next_page:
                 yield scrapy.Request(
                     response.urljoin(next_page),
-                    callback=self.parseCategory, meta={'blogshopname': blogshopname})
+                    callback=self.parseCategory,
+                    meta={'blogshopname': blogshopname, 'count': response.meta.get('count') + 1})
+
+# To run from here instead of the command 'scrapy crawl blogshopping' -- Doesnt work probably due to virtual env.
+# process = CrawlerProcess()
+# process.crawl(BlogshoppingSpider)
+# process.start()

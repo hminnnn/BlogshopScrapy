@@ -69,10 +69,10 @@ ITEM_PIPELINES = {
    'blogshopscrapy.pipelines.BlogshopscrapyPipeline': 300,
 }
 
-MONGODB_SERVER = 'localhost'
+MONGODB_SERVER = "mongodb+srv://hm:hC5ckb9ytDjwfpM6@hmcluster1-mg7pt.gcp.mongodb.net/test?retryWrites=true&w=majority"
 MONGODB_PORT = 27017
 MONGODB_DB = "blogshopscrapy"
-MONGODB_COLLECTION = "data_2019-08-18"
+MONGODB_COLLECTION = "data"
 # MONGODB_COLLECTION = "data_test_" + str(date.today())
 # ITEM_PIPELINES = ['stack.pipelines.MongoDBPipeline', ]
 

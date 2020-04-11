@@ -7,7 +7,7 @@
 
 import pymongo
 import lxml.html
-
+from datetime import date
 
 from scrapy.exceptions import DropItem
 from blogshopscrapy import settings
@@ -58,7 +58,6 @@ class BlogshopscrapyPipeline(object):
                           'culottes': ['pants', 'bottoms'],
                           }
 
-        valid = True
         for key in item:
             if key == 'itemName':
                 tree = lxml.html.fromstring(
@@ -102,10 +101,20 @@ class BlogshopscrapyPipeline(object):
                     self.parsedUrls[item[key]] += 1
                     print("dupe found!!!!!" + item[key])
                     raise DropItem("Missing {0}!".format(item))
-        if valid:
-            # set itemUrl as primary key, update all other fields, increment crawlCount to track which are newly added
+
+            if key == 'dateCrawled':
+                item[key] = str(date.today())
+
+        # if item already exist, dont write to db again -- 11/04/2020 (crawlCount is now useless)
+        itemAlreadyExist = self.db[self.mongodb_collection].find_one({"_id": item['itemUrl']})
+        if (itemAlreadyExist == None):
+            # set itemUrl as primary key, update all other fields, increment crawlCount to track which are newly added -- 18/08/2019
             self.db[self.mongodb_collection].update({'_id': item['itemUrl']},
                                                     {"$inc": {'crawlCount': 1}, "$set": dict(item)}, upsert=True)
             # self.db[self.mongodb_collection].insert(dict(item))
-            logging.info("Added into MongoDB!")
+            logging.info("Adding into MongoDB!")
+        else:
+            logging.info("Already exists in db")
         return item
+
+
