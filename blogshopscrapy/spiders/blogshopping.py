@@ -3,12 +3,16 @@ import scrapy
 import configparser
 from scrapy.crawler import CrawlerProcess
 
+# to run manually:
+# from blogshopscrapy.items import BlogshopscrapyItem
 
-from blogshopscrapy.items import BlogshopscrapyItem
+# to run from scheduler:
+from items import BlogshopscrapyItem
 
 # load config
+propertiesFilePath = '...\\..\\..\\resources\\blogshop-properties.ini'
 config = configparser.ConfigParser()
-config.read('...\\.\\..\\resources\\blogshop-properties.ini')
+config.read(propertiesFilePath)
 runOnePage = False
 maxPagesPerSection = 50
 
@@ -33,6 +37,7 @@ def writeToFile(blogshopitem, blogshopname, current_page_url, item_name, item_pr
 
 
 class BlogshoppingSpider(scrapy.Spider):
+    print("spider!")
     name = 'blogshopping'
     allowed_domains = ['thetinselrack.com', 'shopsassydream.com']
     start_urls = ['https://www.thetinselrack.com', 'https://www.shopsassydream.com']
@@ -41,14 +46,10 @@ class BlogshoppingSpider(scrapy.Spider):
         start_urls = ['https://www.thetinselrack.com/category/apparel']
 
     def parse(self, response):
-
+        print("parse!")
         global runOnePage
         if response.status == 200:
-
-            # print out config file
-            # f = open("...\\.\\..\\resources\\blogshop-properties.ini", "r")
-            # contents = f.read()
-            # print(contents)
+            # self.printPropertiesfile()
 
             # identify which blogshop is the current response from
             for name in blogshop_names_dict:
@@ -59,12 +60,13 @@ class BlogshoppingSpider(scrapy.Spider):
             # get available categories to be parsed
             category_css = config[blogshopname]['CATEGORY']
             categories = response.css(category_css).extract()
-
+            print("still fine")
             if runOnePage:  # only one page for testing
                 yield scrapy.Request(
                     response.urljoin(response.url),
                     callback=self.parseCategory, meta={'blogshopname': blogshopname, 'count': 0})
             else:
+                print("not run one page")
                 categories = list(set(categories))  # store in map to remove duplicates
                 print(categories)
                 for a in categories:  # loop through all pages in
@@ -72,15 +74,18 @@ class BlogshoppingSpider(scrapy.Spider):
                         next_page = response.urljoin(a)
                         yield scrapy.Request(response.urljoin(next_page), callback=self.parseCategory,
                                              meta={'blogshopname': blogshopname, 'count': 0})
+        else:
+            print("response error: " + response.status)
 
     # ------- Parse details on each page for each category -------
     def parseCategory(self, response):
+        print("parseCategory!")
         global maxPagesPerSection
         if response.meta.get('count') > maxPagesPerSection:
-            print("ok no. of pages is now: ", response.meta.get('count'))
+            # print("ok no. of pages is now: ", response.meta.get('count'))
             return None
 
-        print("current page: ", response.meta.get('count'))
+        # print("current page: ", response.meta.get('count'))
 
         current_page_url = response.url
         blogshopname = response.meta.get('blogshopname')
@@ -117,6 +122,7 @@ class BlogshoppingSpider(scrapy.Spider):
             yield blogshopitem
 
         if not runOnePage:
+
             # Next page
             next_page = response.css(config[blogshopname]['NEXT_PAGE_SELECTOR']).extract_first()
             if next_page:
@@ -125,7 +131,18 @@ class BlogshoppingSpider(scrapy.Spider):
                     callback=self.parseCategory,
                     meta={'blogshopname': blogshopname, 'count': response.meta.get('count') + 1})
 
-# To run from here instead of the command 'scrapy crawl blogshopping' -- Doesnt work probably due to virtual env.
-# process = CrawlerProcess()
-# process.crawl(BlogshoppingSpider)
-# process.start()
+
+    # print out config file
+    def printPropertiesfile(self) :
+        try:
+            f = open(propertiesFilePath, "r")
+            contents = f.read()
+            print(contents)
+            f.close();
+        except:
+            f.close();
+            print("error reading properties file")
+
+# process = CrawlerProcess();
+# process.crawl(BlogshoppingSpider);
+# process.start();

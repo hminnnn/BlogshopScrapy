@@ -109,6 +109,7 @@ class BlogshopscrapyPipeline(object):
         # itemAlreadyExist = self.db[self.mongodb_collection].find_one({"_id": item['itemUrl']})
 
         itemAlreadyExist = None;
+        print("writing to dbbbbb")
         if (itemAlreadyExist == None):
             # set itemUrl as primary key, update all other fields, increment crawlCount to track which are newly added -- 18/08/2019
             # self.db[self.mongodb_collection].update({'_id': item['itemUrl']}, {"$inc": {'crawlCount': 1}, "$set": dict(item)}, upsert=True)
